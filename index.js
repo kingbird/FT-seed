@@ -25,7 +25,7 @@ const DAILY_TASK_SECOND_SELECTOR = '#app > div > div.daily-task > div.schedule-c
 // 每日任务第三个奖励
 const DAILY_TASK_THIRD_SELECTOR = '#app > div > div.daily-task > div.schedule-com > div > div > ul > li:nth-child(3) > div.schedule.no-select > div.schedule-gift > i';
 // 每日任务页签到按钮
-const DAILY_TASK_SIGN_BTN_SELECTOR = '#app > div > div.top > div.user-info.bg_white > div.side-right > ul > li:nth-child(1) > i';
+const DAILY_TASK_SIGN_BTN_SELECTOR = '#app > div > div.sign > div > div.sign-card > div > div > div.sign-card-slide.swiper-slide.swiper-slide-active > div > div:nth-child(1)';
 // 每日任务 签到领积分按钮--可签到
 const DAILY_TASK_GET_JF_ENABLE_SELECTOR = '#app > div > div.sign-in-com.fixed > div.sign-in > div.sign-info > div.sign-btn.bg_orange.c_white';
 // 每日任务 签到领积分按钮--不可签到
@@ -39,20 +39,26 @@ const DAILY_TASK_7_AWARD_ENABLE_SELECTOR = '#app > div > div.sign-in-com.fixed >
 // 每日任务 7日抽奖弹窗-关闭按钮
 const DAILY_TASK_7_AWARD_CLOSE_SELECTOR = '#app > div > div.reward-dialog > div.ui-dialog-box._u-modal-box.ui-show.ui-dialog-animation > div > i';
 // 退出页
-const LOGOUT = 'https://account.futu5.com/user/logout';
+const LOGOUT = 'https://seed.futunn.com/site/logout';
 // #endregion
 
 // #region login
 // 需登录的种子页
 const SEED_LOGIN_URL = 'https://passport.futunn.com/?target=https%3A%2F%2Fseed.futunn.com%2F';
+
 // 种子页
 const SEED_URL = 'https://seed.futunn.com/';
 // 用户名
 const USERNAME_SELECTOR = '#loginFormWrapper > form > ul > li.ui-input-wrapper.ui-content-email > input';
 // 密码
 const PASSWORD_SELECTOR = '#loginFormWrapper > form > ul > li:nth-child(3) > input';
+//切换登录方式
+const SWITCH_LOGIN_TYPE_SELECTOR = '#regFormWrapper > div.regFormWrapper01.regFormWrapper > form > p > a';
+// 用户协议
+const AGREEMENT_SELECTOR = '#loginFormWrapper > form > ul > li:nth-child(5) > div.protocal-wrapper > label > span:nth-child(1)';
 // 登录
 const BUTTON_SELECTOR = '#loginFormWrapper > form > input.ui-submit.ui-form-submit';
+
 // #endregion
 
 // #region xiaomi
@@ -188,11 +194,13 @@ const delay = (t) => {
 const login = async (page, type, userindex, user) => {
   console.log(`------开始登录当前角色-${type}-${userindex}-----`);
   if (type === 'self') {
-    await page.evaluate((username, password, button, name, pwd) => {
+    await page.evaluate((username, password, switchLogin, agreement, button, name, pwd) => {
       document.querySelector(username).value = name;
       document.querySelector(password).value = pwd;
+      document.querySelector(switchLogin).click();
+      document.querySelector(agreement).click();
       document.querySelector(button).click();
-    }, USERNAME_SELECTOR, PASSWORD_SELECTOR, BUTTON_SELECTOR, user.name, user.pwd);
+    }, USERNAME_SELECTOR, PASSWORD_SELECTOR, SWITCH_LOGIN_TYPE_SELECTOR, AGREEMENT_SELECTOR, BUTTON_SELECTOR, user.name, user.pwd);
     await page.waitForNavigation();
   } else if (type === 'xiaomi') {
     await page.click(XIAOMI_SELECTOR);
@@ -316,13 +324,13 @@ const sign = async (browser, page) => {
   } else {
     console.log(`    不能抽奖`);
   }
-  await page.click(DAILY_TASK_SIGN_MODAL_CLOSE_SELECTOR);
-  console.log(`    开始领取奖励`);
-  await page.click(DAILY_TASK_FIRST_SELECTOR);
-  await delay(2000);
-  await page.click(DAILY_TASK_SECOND_SELECTOR);
-  await delay(2000);
-  await page.click(DAILY_TASK_THIRD_SELECTOR);
+  // await page.click(DAILY_TASK_SIGN_MODAL_CLOSE_SELECTOR);
+  // console.log(`    开始领取奖励`);
+  // await page.click(DAILY_TASK_FIRST_SELECTOR);
+  // await delay(2000);
+  // await page.click(DAILY_TASK_SECOND_SELECTOR);
+  // await delay(2000);
+  // await page.click(DAILY_TASK_THIRD_SELECTOR);
   console.log(`------签到结束------`);
 };
 
@@ -409,32 +417,41 @@ const water = async (page, type, userindex, nums) => {
     await page.waitForSelector(CANSHIFEI_SELECTOR, {visible: true});
     await page.click(CANSHIFEI_SELECTOR);
   }
-  for (let i = 0; ; i++) {
-    console.log(`------判断是否有人待浇水------`);
-    let judgeIsEnd = 1;
-    let friendlistTimeout = 3000;
-    // if (platform === 'linux') {
-    //   friendlistTimeout = 10000;
-    //   await delay(1000);
-    // }
-    try {
-      await page.waitForSelector(FIRSTFRIENDS_SELECTOR, {visible: true, timeout: friendlistTimeout});
-    } catch (error) {
-      judgeIsEnd = 2;
+  console.log(`------判断是否有人待浇水------`);
+  const waterFriendsIsEmpty = await page.$(FIRSTFRIENDS_SELECTOR);
+  if (waterFriendsIsEmpty !== null) {
+    console.log(`------有人待浇水------`);
+    for (let i = 0; ; i++) {
+      // console.log(`------判断是否有人待浇水------`);
+      let judgeIsEnd = 1;
+      let friendlistTimeout = 3000;
+      // if (platform === 'linux') {
+      //   friendlistTimeout = 10000;
+      //   await delay(1000);
+      // }
+      try {
+        await page.waitForSelector(FIRSTFRIENDS_SELECTOR, {visible: true, timeout: friendlistTimeout});
+      } catch (error) {
+        judgeIsEnd = 2;
+      }
+      if (judgeIsEnd === 2) {
+        console.log(`------浇水结束！-${type}-${userindex}-----`);
+        return;
+      }
+      console.log(`         第${++water_nums}人---浇水`);
+      await page.click(FIRSTFRIENDS_SELECTOR);
+      console.log('          来到浇水页');
+      await page.waitForSelector(TEST, {visible: true});
+      await page.click(TEST);
+      console.log(`         第${water_nums}人---浇完`);
+      await page.waitForSelector(BACKFAMER_SELECTOR, {visible: true});
+      await page.click(BACKFAMER_SELECTOR);
     }
-    if (judgeIsEnd === 2) {
-      console.log(`------浇水结束！-${type}-${userindex}-----`);
-      return;
-    }
-    console.log(`         第${++water_nums}人---浇水`);
-    await page.click(FIRSTFRIENDS_SELECTOR);
-    console.log('          来到浇水页');
-    await page.waitForSelector(TEST, {visible: true});
-    await page.click(TEST);
-    console.log(`         第${water_nums}人---浇完`);
-    await page.waitForSelector(BACKFAMER_SELECTOR, {visible: true});
-    await page.click(BACKFAMER_SELECTOR);
+  } else {
+    console.log(`------无人待浇水------`);
   }
+  
+
 }
 
 // 写入种子包
@@ -490,12 +507,16 @@ const main = async (browser, page, type, userindex, user, nums) => {
   if (program.water === true) {
     await water(page, type, userindex, nums);
   } else {
+    console.log(`------开始退出------`);
     await page.goto(LOGOUT);
+    console.log(`------退出成功------`);
     return;
   }
   main_finished = true;
   if (requestfinished_event) {
+    console.log(`------开始退出------`);
     await page.goto(LOGOUT);
+    console.log(`------退出成功------`);
     return;
   }
 }
@@ -521,9 +542,19 @@ const main = async (browser, page, type, userindex, user, nums) => {
   // 是否开启浇水功能
   if (program.open === true) {
     // 显示无头浏览器
-    browser = await puppeteer.launch({headless: false, slowMo: 200, args});
+    browser = await puppeteer.launch({
+      headless: false, 
+      // 指定chromium地址
+      executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      slowMo: 200, 
+      args});
   } else {
-    browser = await puppeteer.launch({slowMo: 200, args});
+    browser = await puppeteer.launch({
+      // 指定chromium地址
+       executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      slowMo: 200, 
+      args
+    });
   }
   
   // 控制是否点击 可施肥 按钮
@@ -555,12 +586,12 @@ const main = async (browser, page, type, userindex, user, nums) => {
     const pages = await browser.pages();
     const page = pages[0];
     // 去除 页面内部自定义宽高 导致 滚动条出现
-    await page._client.send('Emulation.clearDeviceMetricsOverride');
+    // await page._client.send('Emulation.clearDeviceMetricsOverride');
     try {
       // 主号 走一波
       await main(browser, page, 'self', 0, data[0].list[0], nums);
     } catch (error) {
-      console.log(`主号--出错`);
+      console.log(`主号--出错`, error);
     }
   }
   await browser.close();
