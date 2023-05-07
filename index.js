@@ -544,14 +544,14 @@ const main = async (browser, page, type, userindex, user, nums) => {
     // 显示无头浏览器
     browser = await puppeteer.launch({
       headless: false, 
-      // 指定chromium地址
-      executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      // Mac Arm 需指定chromium地址
+      // executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
       slowMo: 200, 
       args});
   } else {
     browser = await puppeteer.launch({
-      // 指定chromium地址
-       executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      // Mac Arm 需指定chromium地址
+      // executablePath: '/Applications/Chromium.app/Contents/MacOS/Chromium',
       slowMo: 200, 
       args
     });
