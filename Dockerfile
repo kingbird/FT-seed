@@ -12,11 +12,12 @@ RUN apt-get update \
     && /etc/init.d/cron start \
     && apt-get install -y --no-install-recommends vim \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo 'Asia/Shanghai' >/etc/timezone \
-    && git clone https://github.com/kingbird/FT-seed.git \
-    && cd FT-seed \
-    && npm install
+    && echo 'Asia/Shanghai' >/etc/timezone
 
+RUN git clone https://github.com/kingbird/FT-seed.git
+WORKDIR FT-seed
+RUN npm config set registry http://mirrors.cloud.tencent.com/npm/
+RUN npm install
 
 # If running Docker >= 1.13.0 use docker run's --init arg to reap zombie processes, otherwise
 # uncomment the following lines to have `dumb-init` as PID 1
@@ -24,4 +25,6 @@ ADD https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_x
 RUN chmod +x /usr/local/bin/dumb-init
 ENTRYPOINT ["dumb-init", "--"]
 
-CMD ["tail -f /data/FT-seed/log"]
+RUN (crontab -l -u root; echo "0 */6 * * * /usr/local/bin/node /data/FT-seed/index.js -w >> /data/FT-seed/log 2>&1") | crontab
+
+CMD ["tail", "-f", "/data/FT-seed/logs.log"]

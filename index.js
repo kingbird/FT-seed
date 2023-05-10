@@ -1,9 +1,12 @@
-const os = require('os')
-const fs = require('fs')
-const puppeteer = require('puppeteer');
-const program = require('commander');
-const { data } = require('./creds');
+import os from 'os';
+import fs from 'fs';
+import puppeteer from 'puppeteer';
+import program from 'commander';
+import creds from './creds.js';
+import { logger } from './logger.js';
+
 const platform = os.platform();
+const { data } = creds;
 
 // #region 签到
 // 今日要闻链接
@@ -175,7 +178,7 @@ const getHtml = async (page, selector) => {
   const bodyHandle = await page.$(selector);
   if (bodyHandle) {
     const html = await page.evaluate(body => body.innerHTML, bodyHandle);
-    // console.log(html);
+    // logger.info(html);
     await bodyHandle.dispose();
     return html;
   } else {
@@ -192,7 +195,7 @@ const delay = (t) => {
 
 // 登录功能
 const login = async (page, type, userindex, user) => {
-  console.log(`------开始登录当前角色-${type}-${userindex}-----`);
+  logger.info(`------开始登录当前角色-${type}-${userindex}-----`);
   if (type === 'self') {
     await page.evaluate((username, password, switchLogin, agreement, button, name, pwd) => {
       document.querySelector(username).value = name;
@@ -253,13 +256,13 @@ const login = async (page, type, userindex, user) => {
     await page.click(WB_BUTTON_SELECTOR);
     await page.waitForNavigation();
   }
-  console.log(`------结束登录当前角色-${type}-${userindex}-----`);
+  logger.info(`------结束登录当前角色-${type}-${userindex}-----`);
 };
 
 // 签到功能
 const sign = async (browser, page) => {
-  console.log(`------开始签到------`);
-  console.log(`    开始阅读新闻`);
+  logger.info(`------开始签到------`);
+  logger.info(`    开始阅读新闻`);
   await page.goto(NEWS_URL, {waitUntil: 'load'});
   let newsFirstItem = 1;
   try {
@@ -273,9 +276,9 @@ const sign = async (browser, page) => {
     const newPage = await newPagePromise;
     await delay(2000);
     await newPage.close();
-    console.log(`    阅读新闻成功`);
+    logger.info(`    阅读新闻成功`);
   }
-  console.log(`    观看视频-开始`);
+  logger.info(`    观看视频-开始`);
   await page.goto(VIEW_VIDEO_URL, {waitUntil: 'load'});
   let muluBtn = 1;
   try {
@@ -294,10 +297,10 @@ const sign = async (browser, page) => {
     if (videoFirst === 1) {
       await page.click(VIDEO_FIRST_SELECTOR);
       await delay(2000);
-      console.log(`    观看视频-结束`);
+      logger.info(`    观看视频-结束`);
     }
   }
-  console.log(`    开始进入每日任务页`);
+  logger.info(`    开始进入每日任务页`);
   await page.goto(DAILY_TASK_URL, {waitUntil: 'load'});
   await page.waitForSelector(DAILY_TASK_SIGN_BTN_SELECTOR, {visible: true, timeout: 3000});
   await page.click(DAILY_TASK_SIGN_BTN_SELECTOR);
@@ -307,11 +310,11 @@ const sign = async (browser, page) => {
   ]);
   if (judgeIsSign === 1) {
     await page.click(DAILY_TASK_GET_JF_ENABLE_SELECTOR);
-    console.log(`    成功签到`);
+    logger.info(`    成功签到`);
   } else {
-    console.log(`    已经签到`);
+    logger.info(`    已经签到`);
   }
-  console.log(`    开始抽取7日奖励`);
+  logger.info(`    开始抽取7日奖励`);
   let judgeIsAward = await Promise.race([
     page.waitForSelector(DAILY_TASK_7_AWARD_ENABLE_SELECTOR, {visible: true}).then(_ => 1),
     page.waitForSelector(DAILY_TASK_7_AWARD_DISABLE_SELECTOR, {visible: true}).then(_ => 2)
@@ -320,18 +323,18 @@ const sign = async (browser, page) => {
     await page.click(DAILY_TASK_7_AWARD_ENABLE_SELECTOR);
     await page.waitForSelector(DAILY_TASK_7_AWARD_CLOSE_SELECTOR, {visible: true, timeout: 3000});
     await page.click(DAILY_TASK_7_AWARD_CLOSE_SELECTOR);
-    console.log(`    成功抽奖`);
+    logger.info(`    成功抽奖`);
   } else {
-    console.log(`    不能抽奖`);
+    logger.info(`    不能抽奖`);
   }
   // await page.click(DAILY_TASK_SIGN_MODAL_CLOSE_SELECTOR);
-  // console.log(`    开始领取奖励`);
+  // logger.info(`    开始领取奖励`);
   // await page.click(DAILY_TASK_FIRST_SELECTOR);
   // await delay(2000);
   // await page.click(DAILY_TASK_SECOND_SELECTOR);
   // await delay(2000);
   // await page.click(DAILY_TASK_THIRD_SELECTOR);
-  console.log(`------签到结束------`);
+  logger.info(`------签到结束------`);
 };
 
 // 批量关注功能
@@ -342,18 +345,18 @@ const floow = async (page) => {
   await page.setRequestInterception(true);
   page.on('request', interceptedRequest => {
     if (interceptedRequest.url() === 'https://seed.futunn.com/main/follow') {
-      console.log(' ');
-      console.log('-------------------------');
-      console.log('request 请求拦截');
-      console.log({'url': interceptedRequest.url()});
-      console.log({'postData': interceptedRequest.postData()});
-      console.log(`正在重定向关注 ${niuniu[index]}`);
+      logger.info(' ');
+      logger.info('-------------------------');
+      logger.info('request 请求拦截');
+      logger.info({'url': interceptedRequest.url()});
+      logger.info({'postData': interceptedRequest.postData()});
+      logger.info(`正在重定向关注 ${niuniu[index]}`);
       interceptedRequest.continue({
         postData: `follow_id=${niuniu[index]}&action=0`,
       });
       index++;
-      console.log('-------------------------');
-      console.log(' ');
+      logger.info('-------------------------');
+      logger.info(' ');
     } else {
       interceptedRequest.continue();
     }
@@ -390,14 +393,14 @@ const water = async (page, type, userindex, nums) => {
   if (seedPackage === 1 && seed_package_content) {
     await wt(seed_package_content);
   }
-  console.log(`------浇水开始！-${type}-${userindex}-----`);
+  logger.info(`------浇水开始！-${type}-${userindex}-----`);
   const judgeIsGet = await Promise.race([
     page.waitForSelector(GET_SELECTOR, {visible: true}).then(_ => 1),
     page.waitForSelector(CLEAN_SEED_SELECTOR, {visible: true}).then(_ => 2),
     page.waitForSelector(SELF_SELECTOR, {visible: true}).then(_ => 3)
   ]);
   if (judgeIsGet === 1) {
-    console.log(`使用种子`);
+    logger.info(`使用种子`);
     await page.click(GET_SELECTOR);
     await page.waitForSelector(USE_SELECTOR, {visible: true});
     await page.click(USE_SELECTOR);
@@ -408,21 +411,21 @@ const water = async (page, type, userindex, nums) => {
     await page.waitForSelector(CLEAN_SEED_SURE_SELECTOR, {visible: true});
     await page.click(CLEAN_SEED_SURE_SELECTOR);
   }
-  console.log(`开始自我浇水`);
+  logger.info(`开始自我浇水`);
   await page.click(SELF_SELECTOR);
-  console.log(`点击互动页`);
+  logger.info(`点击互动页`);
   await page.click(HUDONG_SELECTOR);
   if (nums === 0) {
-    console.log(`点击可浇水按钮`);
+    logger.info(`点击可浇水按钮`);
     await page.waitForSelector(CANSHIFEI_SELECTOR, {visible: true});
     await page.click(CANSHIFEI_SELECTOR);
   }
-  console.log(`------判断是否有人待浇水------`);
+  logger.info(`------判断是否有人待浇水------`);
   const waterFriendsIsEmpty = await page.$(FIRSTFRIENDS_SELECTOR);
   if (waterFriendsIsEmpty !== null) {
-    console.log(`------有人待浇水------`);
+    logger.info(`------有人待浇水------`);
     for (let i = 0; ; i++) {
-      // console.log(`------判断是否有人待浇水------`);
+      // logger.info(`------判断是否有人待浇水------`);
       let judgeIsEnd = 1;
       let friendlistTimeout = 3000;
       // if (platform === 'linux') {
@@ -435,20 +438,20 @@ const water = async (page, type, userindex, nums) => {
         judgeIsEnd = 2;
       }
       if (judgeIsEnd === 2) {
-        console.log(`------浇水结束！-${type}-${userindex}-----`);
+        logger.info(`------浇水结束！-${type}-${userindex}-----`);
         return;
       }
-      console.log(`         第${++water_nums}人---浇水`);
+      logger.info(`         第${++water_nums}人---浇水`);
       await page.click(FIRSTFRIENDS_SELECTOR);
-      console.log('          来到浇水页');
+      logger.info('          来到浇水页');
       await page.waitForSelector(TEST, {visible: true});
       await page.click(TEST);
-      console.log(`         第${water_nums}人---浇完`);
+      logger.info(`         第${water_nums}人---浇完`);
       await page.waitForSelector(BACKFAMER_SELECTOR, {visible: true});
       await page.click(BACKFAMER_SELECTOR);
     }
   } else {
-    console.log(`------无人待浇水------`);
+    logger.info(`------无人待浇水------`);
   }
   
 
@@ -465,7 +468,7 @@ const wt = (content) => {
         resolve()
       })
     })
-  }).catch(err => {console.log(err);});
+  }).catch(err => {logger.info(err);});
 };
 
 const main = async (browser, page, type, userindex, user, nums) => {
@@ -492,7 +495,7 @@ const main = async (browser, page, type, userindex, user, nums) => {
       }
     });
   } catch (error) {
-    console.log('page on requestfinished error');
+    logger.info('page on requestfinished error');
   }
   await page.goto(SEED_LOGIN_URL, {waitUntil: 'load'});
   await page.setDefaultNavigationTimeout(60 * 1000);
@@ -507,16 +510,16 @@ const main = async (browser, page, type, userindex, user, nums) => {
   if (program.water === true) {
     await water(page, type, userindex, nums);
   } else {
-    console.log(`------开始退出------`);
+    logger.info(`------开始退出------`);
     await page.goto(LOGOUT);
-    console.log(`------退出成功------`);
+    logger.info(`------退出成功------`);
     return;
   }
   main_finished = true;
   if (requestfinished_event) {
-    console.log(`------开始退出------`);
+    logger.info(`------开始退出------`);
     await page.goto(LOGOUT);
-    console.log(`------退出成功------`);
+    logger.info(`------退出成功------`);
     return;
   }
 }
@@ -573,12 +576,12 @@ const main = async (browser, page, type, userindex, user, nums) => {
           await pages[x].close();
         }
         try {
-          console.log(' ');
+          logger.info(' ');
           await main(browser, page, data[i].type, j, data[i].list[j], nums);
           nums++;
         } catch (error) {
-          // console.log(error);
-          console.log(`${data[i].type}--${j}--出错`);
+          // logger.info(error);
+          logger.info(`${data[i].type}--${j}--出错`);
         }
       }
     }
@@ -591,7 +594,7 @@ const main = async (browser, page, type, userindex, user, nums) => {
       // 主号 走一波
       await main(browser, page, 'self', 0, data[0].list[0], nums);
     } catch (error) {
-      console.log(`主号--出错`, error);
+      logger.info(`主号--出错`, error);
     }
   }
   await browser.close();
